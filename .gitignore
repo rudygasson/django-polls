@@ -29,3 +29,6 @@ staticfiles/
 venv/
 env/
 ENV/
+
+# Coverage data
+.coverage
