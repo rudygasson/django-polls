@@ -3,6 +3,7 @@ import datetime
 from django.test import TestCase
 from django.utils import timezone
 from django.urls import reverse
+from django.contrib.auth import get_user_model
 
 from ..models import Question, Choice
 
@@ -17,6 +18,15 @@ def create_question(question_text, days, number_of_choices=3):
     for choice in range(1, number_of_choices):
         Choice.objects.create(question=question, choice_text=choice)
     return question
+
+def login_as_admin(self):
+    User = get_user_model()
+    self.admin_user = User.objects.create_superuser(
+        username='admin',
+        email='admin@example.com',
+        password='password'
+    )
+    self.client.login(username='admin', password='password')
 
 class QuestionIndexViewTests(TestCase):
     def test_no_questions(self):
@@ -49,6 +59,17 @@ class QuestionIndexViewTests(TestCase):
         response = self.client.get(reverse("polls:index"))
         self.assertContains(response, "No polls are available.")
         self.assertQuerySetEqual(response.context["latest_question_list"], [])
+
+    def test_future_question_as_admin(self):
+        """
+        Questions with a pub_date in the future are only displayed on
+        the index page if the user is logged in as admin.
+        """
+        create_question(question_text="Future question.", days=30)
+        login_as_admin(self)
+        response = self.client.get(reverse("polls:index"))
+        self.assertContains(response, "Future question.")
+        self.assertEqual(response.context["latest_question_list"].count(), 1)
 
     def test_future_question_and_past_question(self):
         """

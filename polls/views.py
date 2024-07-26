@@ -15,9 +15,12 @@ class IndexView(generic.ListView):
         """Return the last five published questions."""
         question_list = Question.objects.annotate(num_choices = Count('choice'))
 
+        if self.request.user.is_staff: # type: ignore
+            return question_list.order_by("-pub_date")[:5]
+
         return (
             question_list
-                .filter(pub_date__lte=timezone.now(), num_choices__gt=1 )
+                .filter(pub_date__lte=timezone.now(), num_choices__gt=1)
                 .order_by("-pub_date")[:5]
         )
 
