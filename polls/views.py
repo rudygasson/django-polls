@@ -50,6 +50,7 @@ def vote(request, question_id):
                 "question": question,
                 "error_message": "You didn't select a choice.",
             },
+            status=422
         )
     else:
         selected_choice.votes = F("votes") + 1

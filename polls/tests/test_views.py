@@ -15,8 +15,8 @@ def create_question(question_text, days, number_of_choices=3):
     """
     time = timezone.now() + datetime.timedelta(days=days)
     question = Question.objects.create(question_text=question_text, pub_date=time)
-    for choice in range(1, number_of_choices):
-        Choice.objects.create(question=question, choice_text=choice)
+    for choice in range(1, number_of_choices + 1):
+        Choice.objects.create(question=question, choice_text=f'Choice {choice}')
     return question
 
 def login_as_admin(self):
@@ -147,3 +147,26 @@ class QuestionResultsViewTests(TestCase):
         url = reverse("polls:results", args=(past_question.id,)) # type: ignore
         response = self.client.get(url)
         self.assertContains(response, "Past Question")
+
+    def test_vote_counting(self):
+        """
+        After voting for a choice, the vote counter for this choice
+        is incremented and shown in the results view.
+        """
+        question = create_question(question_text="Test the vote", days=-2)
+        url = reverse("polls:vote", args=(question.id,)) # type: ignore
+        choice = { 'choice': 2 }
+        response = self.client.post(url, data=choice)
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, reverse('polls:results', args=(question.id,)))  # type: ignore
+        self.assertEqual(str(question.choice_set.get(pk=choice['choice'])), "Choice 2") # type: ignore
+
+    def test_vote_missing(self):
+        """
+        If no vote is submitted, the server responds with a 422 status and
+        returns the same form with an error message.
+        """
+        question = create_question(question_text="Test the vote", days=-2)
+        url = reverse("polls:vote", args=(question.id,)) # type: ignore
+        response = self.client.post(url, data={})
+        self.assertContains(response, "select a choice.", status_code=422)
